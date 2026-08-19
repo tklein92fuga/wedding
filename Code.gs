@@ -1,8 +1,8 @@
 const SHEET_NAME = 'RSVP';
 const HEADERS = [
-  'ID', 'Prénom', 'Nom', 'Contact', 'Catégorie', 'Personnes',
-  'Accompagnants', 'Brunch', 'Personnes brunch', 'Montant brunch (€)',
-  'Notes', 'Date', 'Mis à jour le'
+  'ID', 'Prénom', 'Nom', 'Contact', 'Adresse', 'Code postal', 'Ville', 'Pays',
+  'Catégorie', 'Personnes', 'Accompagnants', 'Brunch', 'Personnes brunch',
+  'Montant brunch (€)', 'Notes', 'Date', 'Mis à jour le'
 ];
 
 function doGet(e) {
@@ -40,6 +40,12 @@ function sheet_() {
     sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
     sheet.setFrozenRows(1);
     sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
+  } else {
+    const currentHeaders = sheet.getRange(1, 1, 1, Math.min(sheet.getLastColumn(), HEADERS.length)).getDisplayValues()[0];
+    if (currentHeaders[4] === 'Catégorie') sheet.insertColumnsAfter(4, 4);
+    sheet.getRange(1, 1, 1, HEADERS.length).setValues([HEADERS]);
+    sheet.setFrozenRows(1);
+    sheet.getRange(1, 1, 1, HEADERS.length).setFontWeight('bold');
   }
   return sheet;
 }
@@ -54,7 +60,8 @@ function upsert_(entry) {
     const sheet = sheet_();
     const id = String(entry.id || Date.now());
     const row = [
-      id, clean_(entry.prenom), clean_(entry.nom), clean_(entry.contact), clean_(entry.cat),
+      id, clean_(entry.prenom), clean_(entry.nom), clean_(entry.contact), clean_(entry.adresse),
+      clean_(entry.codePostal), clean_(entry.ville), clean_(entry.pays), clean_(entry.cat),
       Number(entry.total || 1), JSON.stringify(entry.guests || []), entry.brunch ? 'Oui' : 'Non',
       Number(entry.brunchCount || 0), Number(entry.brunchCount || 0) * 30,
       clean_(entry.notes), clean_(entry.date), new Date()
@@ -87,11 +94,12 @@ function listRsvps_() {
   if (lastRow < 2) return [];
   return sheet.getRange(2, 1, lastRow - 1, HEADERS.length).getValues().map(row => {
     let guests = [];
-    try { guests = JSON.parse(row[6] || '[]'); } catch (e) {}
+    try { guests = JSON.parse(row[10] || '[]'); } catch (e) {}
     return {
-      id: row[0], prenom: row[1], nom: row[2], contact: row[3], cat: row[4],
-      total: Number(row[5] || 1), guests: guests, brunch: row[7] === 'Oui',
-      brunchCount: Number(row[8] || 0), notes: row[10] || '', date: row[11] || ''
+      id: row[0], prenom: row[1], nom: row[2], contact: row[3], adresse: row[4] || '',
+      codePostal: row[5] || '', ville: row[6] || '', pays: row[7] || '', cat: row[8],
+      total: Number(row[9] || 1), guests: guests, brunch: row[11] === 'Oui',
+      brunchCount: Number(row[12] || 0), notes: row[14] || '', date: row[15] || ''
     };
   });
 }
